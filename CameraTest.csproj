@@ -276,6 +276,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="CameraTest.Plugins.csproj">
+      <Project>{07D00C89-8E97-A9F8-0536-7DFAB8C1A9D8}</Project>
+      <Name>CameraTest.Plugins</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Assets\AndroidNativPlugin\Examples\Demo\Demo.cs" />
     <Compile Include="Assets\AndroidNativPlugin\Scripts\AndroidNativePlugin\AndroidNativeController.cs" />
     <Compile Include="Assets\AndroidNativPlugin\Scripts\AndroidNativePlugin\AndroidNativePluginLibrary.cs" />
@@ -284,10 +290,29 @@
     <Compile Include="Assets\AnswerPageController.cs" />
     <Compile Include="Assets\DepartmentCell.cs" />
     <Compile Include="Assets\DepartmentMgrPageController.cs" />
+    <Compile Include="Assets\Easy Save 2\ES2Init.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Creating an Automatic Save Structure\ES2UniqueID.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Creating an Automatic Save Structure\UniqueGameLogic.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Creating an Automatic Save Structure\UniqueObjectManager.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Creating an Automatic Save Structure\UniqueSaveManager.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Save and Load Prefabs Instantiated at Runtime\PrefabManager.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Shared Assets\Scripts\MyExampleScript.cs" />
+    <Compile Include="Assets\Easy Save 2\Examples\Upload and Download a Texture\UploadDownloadTexture.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2_AudioClip.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2_GameObject.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2_RawTexture2D.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2_Sprite.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2UserType_UnityEngineCanvasRenderer.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2UserType_UnityEngineLineRenderer.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2UserType_UnityEngineRectTransform.cs" />
+    <Compile Include="Assets\Easy Save 2\Types\ES2UserType_UnityEngineUIText.cs" />
     <Compile Include="Assets\File Chooser\Scripts\DragTitleBar.cs" />
     <Compile Include="Assets\File Chooser\Scripts\FileChooser.cs" />
     <Compile Include="Assets\File Chooser\Scripts\FileChooserDemo.cs" />
     <Compile Include="Assets\FPSCounterNGUI.cs" />
+    <Compile Include="Assets\HellionCat\Sample_SimpleExportCSV\Scripts\SampleFormCSV.cs" />
+    <Compile Include="Assets\HellionCat\Sample_SimpleExportCSV\Scripts\ScoreCSV.cs" />
+    <Compile Include="Assets\HellionCat\Sample_SimpleExportCSV\SimpleExport\Class\SimpleExport_ScoreCSV.cs" />
     <Compile Include="Assets\HospitalCell.cs" />
     <Compile Include="Assets\HospitalMgrPageController.cs" />
     <Compile Include="Assets\IntroPageController.cs" />
@@ -616,8 +641,17 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\AndroidNativPlugin\Plugins\Android\AndroidNativePlugin\AndroidManifest.xml" />
+    <None Include="Assets\Easy Save 2\changelog.txt" />
+    <None Include="Assets\Easy Save 2\readme.txt" />
     <None Include="Assets\File Chooser\readme.txt" />
     <None Include="Assets\JsonDotNet\ReadMe.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ClassTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ComponentTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3TypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3Type_MaterialTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ValueTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\link.xml" />
+    <None Include="Assets\link.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

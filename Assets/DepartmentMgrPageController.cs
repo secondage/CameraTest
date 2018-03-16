@@ -7,8 +7,7 @@ using UnityEngine.UI;
 using waqashaxhmi.AndroidNativePlugin;
 using Newtonsoft.Json;
 using System.Linq;
-
-
+using System.Text.RegularExpressions;
 
 public class DepartmentMgrPageController : MonoBehaviour
 {
@@ -138,6 +137,26 @@ public class DepartmentMgrPageController : MonoBehaviour
     {
         if (nameInput.text == "")
             return;
+        string pattern = @"^[^ ]{2,16}$";
+        Regex regex = new Regex(pattern);
+        if (!regex.IsMatch(nameInput.text))
+        {
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("科室名称为2-16个字符，且不能存在空格");
+#endif
+            Debug.LogWarning("科室名称为2-16个字符，且不能存在空格");
+            return;
+        }
+        pattern = @"^[^\/\:\*\?\""\<\>\|\,\.\。\，\？\、\；\“\”]+$";
+        regex = new Regex(pattern);
+        if (!regex.IsMatch(nameInput.text))
+        {
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("科室名称仅能使用汉字，英文字母，数字");
+#endif
+            Debug.LogWarning("科室名称仅能使用汉字，英文字母，数字");
+            return;
+        }
         string name = nameInput.text;
         int result = PollsConfig.AddDepartment(name);
         if (result == -1)

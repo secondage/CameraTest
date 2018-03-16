@@ -280,14 +280,32 @@
       <Project>{CF4AC926-2A83-AAE5-D8E0-1C09B85F643B}</Project>
       <Name>CameraTest</Name>
     </ProjectReference>
+    <ProjectReference Include="CameraTest.Plugins.csproj">
+      <Project>{07D00C89-8E97-A9F8-0536-7DFAB8C1A9D8}</Project>
+      <Name>CameraTest.Plugins</Name>
+    </ProjectReference>
+    <ProjectReference Include="CameraTest.Editor.Plugins.csproj">
+      <Project>{5EBF2500-817C-C691-805B-E6DFFF008220}</Project>
+      <Name>CameraTest.Editor.Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\AndroidNativPlugin\Editor\NGUI.cs" />
+    <Compile Include="Assets\Easy Save 2\Editor\InstallES3Beta.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\AndroidNativPlugin\Plugins\Android\AndroidNativePlugin\AndroidManifest.xml" />
+    <None Include="Assets\Easy Save 2\changelog.txt" />
+    <None Include="Assets\Easy Save 2\readme.txt" />
     <None Include="Assets\File Chooser\readme.txt" />
     <None Include="Assets\JsonDotNet\ReadMe.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ClassTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ComponentTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3TypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3Type_MaterialTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\Editor\ES3ValueTypeTemplate.txt" />
+    <None Include="Assets\Plugins\Easy Save 3\link.xml" />
+    <None Include="Assets\link.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

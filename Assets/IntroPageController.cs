@@ -58,8 +58,8 @@ public class IntroPageController : MonoBehaviour {
     }
     // Use this for initialization
     void Start () {
-		
-	}
+        StartCoroutine(GetWebCamAuthorization());
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -91,4 +91,17 @@ public class IntroPageController : MonoBehaviour {
             answerPage.gameObject.SetActive(true);
         }
     }
+
+
+    public IEnumerator GetWebCamAuthorization()
+    {
+        yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
+        if (Application.HasUserAuthorization(UserAuthorization.WebCam))
+        {
+           
+
+        }
+    }
+
+    
 }

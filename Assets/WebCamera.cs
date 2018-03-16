@@ -133,7 +133,7 @@ public class WebCamera : MonoBehaviour
         Color[] colors = wt.GetPixels();
         byte[] colorbytes = StructToBytes(colors, colors.Length * 4);
         //Array colorarray = new Array();
-        using (ZipOutputStream s = new ZipOutputStream(File.Create(Application.persistentDataPath + "/Photoes/" + "1.zip")))
+       /* using (ZipOutputStream s = new ZipOutputStream(File.Create(Application.persistentDataPath + "/Photoes/" + "1.zip")))
         {
             s.SetLevel(5);
             s.Password = "1q2w3e";
@@ -143,14 +143,14 @@ public class WebCamera : MonoBehaviour
             s.Write(colorbytes, 0, colorbytes.Length);
             s.Finish();
             s.Close();
-        }
+        } */
 		
         t.SetPixels(wt.GetPixels());
 
         //距X左的距离        距Y屏上的距离  
         // t.ReadPixels(new Rect(220, 180, 200, 180), 0, 0, false);  
         //t.Apply();
-        byte[] byt = t.EncodeToPNG();
+        byte[] byt = t.EncodeToJPG();
         File.WriteAllBytes(Application.persistentDataPath + "/Photoes/" + Time.time + ".jpg", byt);
         tex.Play();
     }

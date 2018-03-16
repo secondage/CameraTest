@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
 using UnityEngine;
@@ -30,6 +32,7 @@ public class AnswerPageController : MonoBehaviour
     public Sprite donePressSprite;
     public Sprite rightNormalSprite;
     public Sprite rightPressSprite;
+    public RawImage webcamRawImage;
 
     public Button doneButton;
 
@@ -120,7 +123,10 @@ public class AnswerPageController : MonoBehaviour
         try
         {
             if (!previewMode)
+            {
                 currentAnswer = new List<PollsConfig.Answer>();
+                photoList = new List<byte[]>();
+            }
             if (!PollsConfig.QuestionMap.ContainsKey(jsonPath))
             {
                 var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
@@ -172,6 +178,8 @@ public class AnswerPageController : MonoBehaviour
                     if (!previewMode)
                     {
                         PollsConfig.Answer a = new PollsConfig.Answer();
+                        a.limit = q.limit;
+                        a.shorttxt = q.shorttext;
                         currentAnswer.Add(a);
                     }
                 }
@@ -192,7 +200,12 @@ public class AnswerPageController : MonoBehaviour
             }
             holdPanel.SetActive(false);
             numQuestion = 0;
-           
+            if (!previewMode)
+            {
+                userGuid = Guid.NewGuid().ToString();
+                OpenWebCamera();
+                CreateTmpFolder();
+            }
             StartQuestions();
         }
         catch (Exception e)
@@ -202,8 +215,19 @@ public class AnswerPageController : MonoBehaviour
     }
 
     List<PollsConfig.Answer> currentAnswer;
+    List<byte[]> photoList = null;
     private void OnEnable()
     {
+        if (photoList != null)
+        {
+            photoList.Clear();
+            photoList = null;
+        }
+        if (webcamTexture != null)
+        {
+            webcamTexture.Stop();
+        }
+        webcamTexture = null;
         doneButton.gameObject.SetActive(false);
         if (PollsConfig.selectedDepartment == null || PollsConfig.selectedHospital == null)
         {
@@ -221,6 +245,7 @@ public class AnswerPageController : MonoBehaviour
             introPage.gameObject.SetActive(true);
 #endif
         }
+
         selectedDeparmentText.text = PollsConfig.selectedDepartment.name;
         selectedHospitalText.text = PollsConfig.selectedHospital.name;
         holdPanel.SetActive(true);
@@ -240,12 +265,19 @@ public class AnswerPageController : MonoBehaviour
     }
 
     int numQuestion = 0;
+    string userGuid = "";
     int currentChecked = 0;
     void StartQuestions()
     {
         List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
         if (qs != null)
         {
+            //take photo
+            if (numQuestion != 0 && numQuestion % 2 == 0 && webcamTexture != null)
+            {
+                webcamTexture.Pause();
+                StartCoroutine(CaptureWebCamTexture());
+            }
             PollsConfig.Question q = qs[numQuestion];
             if (!previewMode)
             {
@@ -450,6 +482,7 @@ public class AnswerPageController : MonoBehaviour
 
     public void OnRightBtnClick()
     {
+        
         List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
         if (numQuestion < qs.Count - 1)
         {
@@ -516,6 +549,7 @@ public class AnswerPageController : MonoBehaviour
             if (q.limit == 1)
             {
                 currentAnswer[numQuestion].answers[idx] = 1;
+                currentAnswer[numQuestion].answer = (byte)(idx + 1);
             }
             else if (currentChecked < q.limit)
             {
@@ -559,8 +593,153 @@ public class AnswerPageController : MonoBehaviour
     public void OnDoneBtnClick()
     {
         PollsConfig.NumPeoples = PollsConfig.NumPeoples + 1;
-        PollsConfig.SaveAnswer(currentAnswer);
+        PollsConfig.SaveAnswer(currentAnswer, photoList, userGuid);
         this.gameObject.SetActive(false);
         introPage.gameObject.SetActive(true);
+    }
+
+    public static byte[] StructToBytes(object structObj, int size)
+    {
+        byte[] bytes = new byte[size];
+        IntPtr structPtr = Marshal.AllocHGlobal(size);
+        //将结构体拷到分配好的内存空间
+        Marshal.StructureToPtr(structObj, structPtr, false);
+        //从内存空间拷贝到byte 数组
+        Marshal.Copy(structPtr, bytes, 0, size);
+        //释放内存空间
+        Marshal.FreeHGlobal(structPtr);
+        return bytes;
+
+    }
+
+
+    public static object ByteToStruct(byte[] bytes, Type type)
+    {
+        int size = Marshal.SizeOf(type);
+        if (size > bytes.Length)
+        {
+            return null;
+        }
+        //分配结构体内存空间
+        IntPtr structPtr = Marshal.AllocHGlobal(size);
+        //将byte数组拷贝到分配好的内存空间
+        Marshal.Copy(bytes, 0, structPtr, size);
+        //将内存空间转换为目标结构体
+        object obj = Marshal.PtrToStructure(structPtr, type);
+        //释放内存空间
+        Marshal.FreeHGlobal(structPtr);
+        return obj;
+    }
+
+    public string deviceName;
+    //接收返回的图片数据  
+    WebCamTexture webcamTexture = null;
+    void OpenWebCamera()
+    {
+        if (Application.HasUserAuthorization(UserAuthorization.WebCam))
+        {
+            if (webcamTexture == null)
+            {
+                WebCamDevice[] devices = WebCamTexture.devices;
+                if (Application.platform == RuntimePlatform.WindowsEditor)
+                    deviceName = devices[0].name;
+                else
+                    deviceName = devices[1].name;
+                webcamTexture = new WebCamTexture(deviceName, 640, 480, 12);
+                RawImage ri = GetComponent<RawImage>();
+                webcamRawImage.texture = webcamTexture;
+                webcamTexture.Play();
+            }
+            else
+            {
+                webcamTexture.Play();
+            }
+        }
+    }
+
+    string tmpPath;
+    IEnumerator CaptureWebCamTexture()
+    {
+        yield return new WaitForEndOfFrame();
+        //Texture2D t = new Texture2D(400, 300);
+        //t.ReadPixels(new Rect(Screen.width / 2 - 200, Screen.height / 2 - 50, 360, 300), 0, 0, false);
+        
+        WebCamTexture wt = (WebCamTexture)webcamRawImage.texture;
+
+        int width = webcamRawImage.texture.width;
+        int height = webcamRawImage.texture.height;
+        Texture2D t = new Texture2D(width, height, TextureFormat.ARGB32, false);
+        // RenderTexture.active = ri.texture;
+        Color[] colors = wt.GetPixels();
+        byte[] colorbytes = StructToBytes(colors, colors.Length * 4);
+        //Array colorarray = new Array();
+        /*using (ZipOutputStream s = new ZipOutputStream(File.Create(Application.persistentDataPath + "/Photoes/" + "1.zip")))
+        {
+            s.SetLevel(5);
+            s.Password = "1q2w3e";
+            ZipEntry entry = new ZipEntry(Path.GetFileName("block1"));
+            entry.DateTime = DateTime.Now;
+            s.PutNextEntry(entry);
+            s.Write(colorbytes, 0, colorbytes.Length);
+            s.Finish();
+            s.Close();
+        }*/
+
+        t.SetPixels(wt.GetPixels());
+
+        //距X左的距离        距Y屏上的距离  
+        // t.ReadPixels(new Rect(220, 180, 200, 180), 0, 0, false);  
+        //t.Apply();
+        byte[] byt = t.EncodeToJPG(60);
+        photoList.Add(byt);
+        //File.WriteAllBytes(tmpPath + "/" + numQuestion + ".jpg", byt);
+        webcamTexture.Play();
+    }
+
+    void CreateTmpFolder()
+    {
+        try
+        {
+            string folderPath = Application.persistentDataPath + "/" + PollsConfig.selectedHospital.name;
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            folderPath += "/" + PollsConfig.selectedDepartment.name;
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            folderPath += "/" + Path.GetFileNameWithoutExtension(PollsConfig.selectedDepartment.questionPath);
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            folderPath += "/Photos";
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            folderPath += "/" + userGuid;
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+            tmpPath = folderPath;
+        }
+        catch(Exception e)
+        {
+            Debug.LogError(e.Message);
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("创建临时路径失败");
+#endif
+        }
+    }
+
+    private void OnDisable()
+    {
+        //photoList.Clear();
+        webcamTexture.Stop();
+        webcamTexture = null;
     }
 }

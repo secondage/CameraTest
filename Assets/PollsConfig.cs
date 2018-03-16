@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-
+using Assets.HellionCat.SimpleExport;
 using System;
 using System.Security.Cryptography;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
+using System.Collections.Specialized;
+using System.Text;
+using waqashaxhmi.AndroidNativePlugin;
 
 public class PollsConfig : MonoBehaviour
 {
@@ -45,7 +48,7 @@ public class PollsConfig : MonoBehaviour
     {
         public DateTime startTime;
         public DateTime endTime;
-       
+        public string shorttxt;
         public string id;
         public int type;
         public int limit;
@@ -59,6 +62,7 @@ public class PollsConfig : MonoBehaviour
         public HospitalCellInfo hospital;
         public DepartmentCellInfo department;
         public List<Answer> answers;
+        public List<byte[]> photos;
     }
 
     static public Dictionary<string, List<AnswerStorge>> Answers = new Dictionary<string, List<AnswerStorge>>();
@@ -69,6 +73,7 @@ public class PollsConfig : MonoBehaviour
     static public DepartmentCellInfo selectedDepartment= null; //当前科室
 
     static public Dictionary<string, HospitalCellInfo> Hospitals = new Dictionary<string, HospitalCellInfo>();
+    private static readonly int MAX_ANS_COUNT = 20;
 
     static public string GetMD5(string msg)
     {
@@ -287,6 +292,7 @@ public class PollsConfig : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log(Application.persistentDataPath);
         Application.targetFrameRate = 100;
         UnserializeData();
         LoadAnswer();
@@ -307,17 +313,132 @@ public class PollsConfig : MonoBehaviour
         
     }
 
-    static public void SaveAnswer(List<Answer> answers)
+    public static string get_ascii(string unicodeString)
+    {
+
+
+        byte[] Buff = System.Text.Encoding.Unicode.GetBytes(unicodeString);
+        string retStr = System.Text.Encoding.ASCII.GetString(Buff, 0, Buff.Length);
+        return retStr;
+   }
+
+    static public void ExportData(string path)
     {
         try
         {
-           
+            //AnswerStorge ans = null;
+            foreach (KeyValuePair<string, List<AnswerStorge>> pair in Answers)
+            {
+                ES2Spreadsheet sheet = new ES2Spreadsheet();
+                AnswerStorge _ans = pair.Value[0];
+                // Add data to cells in the spreadsheet.
+                
+                //List<Question> qs = QuestionMap[pair.Value[0].department.questionPath];
+                for (int row = 0; row < pair.Value.Count + 1; row++)
+                {
+                    for (int col = 0; col < pair.Value[0].answers.Count + 5; col++)
+                    {
+                        if (row == 0)
+                        {
+                            switch (col)
+                            {
+                                case 0:
+                                    sheet.SetCell(col, row, "病人id");
+                                    break;
+                                case 1:
+                                    sheet.SetCell(col, row, "调查科室");
+                                    break;
+                                case 2:
+                                    sheet.SetCell(col, row, "调查开始时间");
+                                    break;
+                                case 3:
+                                    sheet.SetCell(col, row, "调查结束时间");
+                                    break;
+                                case 4:
+                                    sheet.SetCell(col, row, "耗时（秒");
+                                    break;
+                                default:
+                                    sheet.SetCell(col, row, (col - 4).ToString() + "." + pair.Value[0].answers[col - 5].shorttxt);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            switch (col)
+                            {
+                                case 0:
+                                    sheet.SetCell(col, row, pair.Value[row - 1].guid);
+                                    break;
+                                case 1:
+                                    sheet.SetCell(col, row, pair.Value[row - 1].department.name);
+                                    break;
+                                case 2:
+                                    sheet.SetCell(col, row, pair.Value[row - 1].answers[0].startTime.ToShortDateString().ToString() + " " +
+                                       pair.Value[row - 1].answers[0].startTime.ToShortTimeString().ToString());
+                                    break;
+                                case 3:
+                                    sheet.SetCell(col, row, pair.Value[row - 1].answers[pair.Value[row - 1].answers.Count - 1].endTime.ToShortDateString().ToString() + " " +
+                                       pair.Value[row - 1].answers[pair.Value[row - 1].answers.Count - 1].endTime.ToShortTimeString().ToString());
+                                    break;
+                                case 4:
+                                    sheet.SetCell(col, row, (pair.Value[row - 1].answers[pair.Value[row - 1].answers.Count - 1].endTime - pair.Value[row - 1].answers[0].startTime).TotalSeconds);
+                                    break;
+                                default:
+                                    if (pair.Value[row - 1].answers[col - 5].limit == 1)
+                                        sheet.SetCell(col, row, pair.Value[row - 1].answers[col - 5].answer);
+                                    else
+                                    {
+                                        UInt32 t = 0;
+                                        for (int i = 0; i < MAX_ANS_COUNT; ++i)
+                                        {
+                                            if (pair.Value[row - 1].answers[col - 5].answers[i] == 1)
+                                            {
+                                                t += (UInt32)Math.Pow(2, i);
+                                            }
+                                        }
+                                        sheet.SetCell(col, row, t.ToString());
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+                string _folderPath = path + "/" + _ans.hospital.name;
+                _folderPath += "/" + _ans.department.name;
+                _folderPath += "/" + Path.GetFileNameWithoutExtension(_ans.department.questionPath);
+                sheet.Save(_folderPath + "/" + "mySheet.csv");
+
+                foreach(AnswerStorge ans in pair.Value)
+                {
+                    for (int i = 0; i < ans.photos.Count; ++i)
+                    {
+                        File.WriteAllBytes(_folderPath + "/" + ans.guid + "-" + (i + 1).ToString() + ".jpg", ans.photos[i]);
+                    }
+                }
+            }
+            //SimpleExport_ScoreCSV.ExportCSV()
+        }
+        catch(Exception e)
+        {
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("导出数据错误，请退出后重试");
+#endif
+            Debug.LogError(e.Message);
+        }
+    }
+
+    static public void SaveAnswer(List<Answer> answers, List<byte[]> photos, string guid)
+    {
+        try
+        {
+
             AnswerStorge ans = new AnswerStorge();
             ans.hospital = selectedHospital;
             ans.department = selectedDepartment;
             ans.answers = answers;
-            ans.guid = Guid.NewGuid().ToString();
-            string hash = ans.hospital.name + ans.department.name + Path.GetFileNameWithoutExtension(selectedDepartment.questionPath);
+            ans.photos = photos;
+            ans.guid = guid;
+            string hash = ans.hospital.name + "%" + ans.department.name + "%" + Path.GetFileNameWithoutExtension(selectedDepartment.questionPath);
             List<AnswerStorge> slist = null;
             if (Answers.ContainsKey(hash))
             {
@@ -352,6 +473,8 @@ public class PollsConfig : MonoBehaviour
             bf = new BinaryFormatter();
             bf.Serialize(fs, Answers);
             fs.Close();
+
+
         }
         catch (Exception e)
         {

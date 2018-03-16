@@ -168,6 +168,8 @@ public class FileChooser : MonoBehaviour {
 		for(int i=0;i<files.Length;i++){
 
 			string fileName = Path.GetFileName(files[i]);
+            if (filter == "")
+                continue;
 			//skip if doesn't match pattern:
 			if(filter!="" && !Regex.IsMatch (fileName,filter,RegexOptions.IgnoreCase)) continue;
 
@@ -222,9 +224,12 @@ public class FileChooser : MonoBehaviour {
 			}
 			//if file still not exist don't return
 			if( !File.Exists( fullFilename) ) {
-				Debug.Log ("Can't return. File does not exist: "+fullFilename);
-				return;
-			}
+                if (!Directory.Exists(fullFilename))
+                {
+                    Debug.Log("Can't return. Directory or File does not exist: " + fullFilename);
+                    return;
+                }
+           }
 		}
 
 		if(callbackYes!=null)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using waqashaxhmi.AndroidNativePlugin;
@@ -109,6 +110,26 @@ public class HospitalMgrPageController : MonoBehaviour {
     {
         if (nameInput.text == "")
             return;
+        string pattern = @"^[^ ]{2,16}$";
+        Regex regex = new Regex(pattern);
+        if (!regex.IsMatch(nameInput.text))
+        {
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("医院名称为2-16个字符，且不能存在空格");
+#endif
+            Debug.LogWarning("医院名称为2-16个字符，且不能存在空格");
+            return;
+        }
+        pattern = @"^[^\/\:\*\?\""\<\>\|\,\.\。\，\？\、\；\“\”]+$";
+        regex = new Regex(pattern);
+        if (!regex.IsMatch(nameInput.text))
+        {
+#if UNITY_ANDROID
+            AndroidNativePluginLibrary.Instance.ShowToast("医院名称仅能使用汉字，英文字母，数字");
+#endif
+            Debug.LogWarning("医院名称仅能使用汉字，英文字母，数字");
+            return;
+        }
         string name = nameInput.text;
         int result = PollsConfig.AddHospitals(name);
         if (result == -1)
