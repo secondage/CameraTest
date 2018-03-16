@@ -233,8 +233,6 @@ public class MgrPageController : MonoBehaviour
         pwdStage = PWD_STAGE.VERIFY_QUESTION_PWD;
         mgrPasswordInput.text = "";
         mgrPasswordInput.ActivateInputField();
-
-       
     }
 
     public void OnExportBtnClick()
@@ -243,10 +241,6 @@ public class MgrPageController : MonoBehaviour
         pwdStage = PWD_STAGE.VERIFY_EXPORT_PWD;
         mgrPasswordInput.text = "";
         mgrPasswordInput.ActivateInputField();
-
-        
-
-        
     }
 
 }
