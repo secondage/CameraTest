@@ -1,15 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
+using DeadMosquito.AndroidGoodies;
 
 public class IntroPageController : MonoBehaviour {
-    [SerializeField]
-    Text textSelectedHospital;
-    [SerializeField]
-    Text textSelecteDepartment;
-    [SerializeField]
-    Text textNumPeoples;
+    public Text textSelectedHospital;
+    public Text textSelecteDepartment;
+    public Text textNumPeoples;
     [SerializeField]
     Button btnStart;
     [SerializeField]
@@ -22,8 +21,26 @@ public class IntroPageController : MonoBehaviour {
     GameObject answerPage;
 
 
+    public Text verText;
+
     private void OnEnable()
     {
+#if UNITY_ANDROID
+      
+        var builder = new StringBuilder();
+        // Device info
+        builder.AppendLine("ANDROID_ID : " + AndroidDeviceInfo.GetAndroidId());
+        builder.AppendLine("APP_VERSION : " + Application.version.ToString());
+
+        builder.AppendLine("----------- Build class------------");
+        builder.AppendLine("DEVICE : " + AndroidDeviceInfo.DEVICE);
+        builder.AppendLine("MODEL : " + AndroidDeviceInfo.MODEL);
+        builder.AppendLine("SERIAL : " + AndroidDeviceInfo.SERIAL);
+        builder.AppendLine("PRODUCT : " + AndroidDeviceInfo.PRODUCT);
+        builder.AppendLine("MANUFACTURER : " + AndroidDeviceInfo.MANUFACTURER);
+
+        verText.text = builder.ToString();
+#endif
         if (PollsConfig.selectedHospital != null)
         {
             textSelectedHospital.text = PollsConfig.selectedHospital.name;

@@ -286,6 +286,7 @@ public class DepartmentMgrPageController : MonoBehaviour
 
     public void BackToHospitalMgrPage()
     {
+        fileChooser.gameObject.SetActive(false);
         hotDepartmentCell = null;
         this.gameObject.SetActive(false);
         HospitalMgrPage.gameObject.SetActive(true);

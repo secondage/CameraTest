@@ -223,6 +223,7 @@ public class MgrPageController : MonoBehaviour
 
     public void OnReturnBtnClick()
     {
+        fileChooser.gameObject.SetActive(false);
         this.gameObject.SetActive(false);
         introPage.gameObject.SetActive(true);
     }

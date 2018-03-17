@@ -282,6 +282,18 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\AndroidGoodies\Scripts\Goodies\Other\AndroidDeviceInfo.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Goodies\Other\AndroidGoodiesMisc.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Goodies\Other\AndroidMaps.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Goodies\Other\AndroidShare.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Goodies\Utils\AndroidUtils.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\AndroidIntent.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\AndroidUri.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\GoodiesSceneHelper.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\Interface\DialogOnCancelListenerPoxy.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\Interface\DialogOnClickListenerProxy.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\Interface\DialogOnDismissListenerProxy.cs" />
+    <Compile Include="Assets\AndroidGoodies\Scripts\Internal\Interface\DialogOnMultiChoiceClickListenerProxy.cs" />
     <Compile Include="Assets\AndroidNativPlugin\Examples\Demo\Demo.cs" />
     <Compile Include="Assets\AndroidNativPlugin\Scripts\AndroidNativePlugin\AndroidNativeController.cs" />
     <Compile Include="Assets\AndroidNativPlugin\Scripts\AndroidNativePlugin\AndroidNativePluginLibrary.cs" />
