@@ -38,6 +38,7 @@ public class IntroPageController : MonoBehaviour {
         builder.AppendLine("SERIAL : " + AndroidDeviceInfo.SERIAL);
         builder.AppendLine("PRODUCT : " + AndroidDeviceInfo.PRODUCT);
         builder.AppendLine("MANUFACTURER : " + AndroidDeviceInfo.MANUFACTURER);
+        builder.AppendLine("RESOLUTION : " + Screen.currentResolution.ToString());
 
         verText.text = builder.ToString();
 #endif

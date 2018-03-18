@@ -276,13 +276,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="CameraTest.csproj">
-      <Project>{CF4AC926-2A83-AAE5-D8E0-1C09B85F643B}</Project>
-      <Name>CameraTest</Name>
-    </ProjectReference>
     <ProjectReference Include="CameraTest.Plugins.csproj">
       <Project>{07D00C89-8E97-A9F8-0536-7DFAB8C1A9D8}</Project>
       <Name>CameraTest.Plugins</Name>
+    </ProjectReference>
+    <ProjectReference Include="CameraTest.csproj">
+      <Project>{CF4AC926-2A83-AAE5-D8E0-1C09B85F643B}</Project>
+      <Name>CameraTest</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

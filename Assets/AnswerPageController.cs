@@ -739,7 +739,10 @@ public class AnswerPageController : MonoBehaviour
     private void OnDisable()
     {
         //photoList.Clear();
-        webcamTexture.Stop();
+        if (webcamTexture != null)
+        {
+            webcamTexture.Stop();
+        }
         webcamTexture = null;
     }
 }
