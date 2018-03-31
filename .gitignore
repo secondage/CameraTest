@@ -53,3 +53,5 @@ UnityPackageManager
 *.apk
 Easy Save 2/*
 
+/.vs/CameraTest/v15/sqlite3/db.lock
+/.vs/CameraTest/v15/Server/sqlite3/db.lock

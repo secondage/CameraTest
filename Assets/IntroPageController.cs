@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DeadMosquito.AndroidGoodies;
 
+
 public class IntroPageController : MonoBehaviour {
     public Text textSelectedHospital;
     public Text textSelecteDepartment;
@@ -19,6 +20,9 @@ public class IntroPageController : MonoBehaviour {
     GameObject mgrPage;
     [SerializeField]
     GameObject answerPage;
+
+    public InputField passwordInput;
+    public Text textTopic;
 
 
     public Text verText;
@@ -86,8 +90,19 @@ public class IntroPageController : MonoBehaviour {
 
     public void OnMgrBtnClick()
     {
-        this.gameObject.SetActive(false);
-        mgrPage.gameObject.SetActive(true);
+        btnMgr.interactable = false;
+        if (PollsConfig.Password != "")
+        {
+            textTopic.text = "请输入管理员密码";
+            passwordInput.text = "";
+            passwordInput.ActivateInputField();
+        }
+        else
+        {
+            btnMgr.interactable = true;
+            this.gameObject.SetActive(false);
+            mgrPage.gameObject.SetActive(true);
+        }
     }
 
     public void OnStartBtnClick()
@@ -118,6 +133,25 @@ public class IntroPageController : MonoBehaviour {
         {
            
 
+        }
+    }
+
+    public void OnPwdInputEnd()
+    {
+        btnMgr.interactable = true;
+        textTopic.text = "";
+        if (passwordInput.text == "")
+            return;
+        if (PollsConfig.GetMD5(passwordInput.text) == PollsConfig.Password)
+        {
+            this.gameObject.SetActive(false);
+            mgrPage.gameObject.SetActive(true);
+        }
+        else
+        {
+#if UNITY_ANDROID
+            Toast.ShowToast("请输入正确的管理员密码");
+#endif
         }
     }
 

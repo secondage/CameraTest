@@ -6,10 +6,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Xml.Serialization;
 using UnityEngine;
 using UnityEngine.UI;
-using waqashaxhmi.AndroidNativePlugin;
+using DG.Tweening;
 
 public class AnswerPageController : MonoBehaviour
 {
@@ -34,17 +33,27 @@ public class AnswerPageController : MonoBehaviour
     public Sprite rightPressSprite;
     public RawImage webcamRawImage;
 
+    public Image leftAvatarImage;
+    public Image rightAvatarImage;
+
+    public Button ReadyBtn;
+    public Image ClickImg;
+    public Image LoadImg;
+    public MessageBox messageBox;
+
     public Button doneButton;
 
     static public bool previewMode = false;
     [SerializeField]
     Sprite[] emojiNormalSprite = new Sprite[6];
     [SerializeField]
-    Sprite[] emojiPressSprite = new Sprite[6];
-    [SerializeField]
     Sprite[] emojiDisableSprite = new Sprite[6];
     // Use this for initialization
 
+
+
+    List<PollsConfig.Answer> currentAnswer;
+    List<byte[]> photoList = null;
 
 
     public class QuestionParser
@@ -57,6 +66,11 @@ public class AnswerPageController : MonoBehaviour
         public int type { get; set; }
         public string text { get; set; }
         public string shorttxt { get; set; }
+        public string index1 { get; set; }
+        public string index2 { get; set; }
+        public string index3 { get; set; }
+        public string index4 { get; set; }
+        public string index5 { get; set; }
         public int limit { get; set; }
         public string answer1 { get; set; }
         public string answer2 { get; set; }
@@ -113,11 +127,16 @@ public class AnswerPageController : MonoBehaviour
                 parseJson();
                 //DataLoaded = true;
                 www.Dispose();
+                loaded = true;
+                ClickImg.enabled = true;
+                ClickImg.color = Color.white;
+                //ClickImg.DOFade(0.0f, 0.5f).SetLoops(-1);
+                LoadImg.enabled = false;
             }
         }
     }
 
-
+    bool loaded = false;
     private void parseJson()
     {
         try
@@ -132,16 +151,21 @@ public class AnswerPageController : MonoBehaviour
                 var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
                 List<QuestionParser> configs = JsonConvert.DeserializeObject<List<QuestionParser>>(json, settings);
                 List<PollsConfig.Question> qs = new List<PollsConfig.Question>();
-                
+
                 foreach (QuestionParser d in configs)
                 {
                     PollsConfig.Question q = new PollsConfig.Question();
-                    
+
                     q.id = d.id;
                     q.type = d.type;
                     q.limit = d.limit;
                     q.question = d.text;
                     q.shorttext = d.shorttxt;
+                    q.indeices[0] = d.index1;
+                    q.indeices[1] = d.index2;
+                    q.indeices[2] = d.index3;
+                    q.indeices[3] = d.index4;
+                    q.indeices[4] = d.index5;
                     q.answers[0] = d.answer1;
                     q.answers[1] = d.answer2;
                     q.answers[2] = d.answer3;
@@ -180,6 +204,7 @@ public class AnswerPageController : MonoBehaviour
                         PollsConfig.Answer a = new PollsConfig.Answer();
                         a.limit = q.limit;
                         a.shorttxt = q.shorttext;
+                        a.longtxt = "";
                         currentAnswer.Add(a);
                     }
                 }
@@ -190,7 +215,7 @@ public class AnswerPageController : MonoBehaviour
             {
                 if (!previewMode)
                 {
-                    List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
+                    List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionID];
                     foreach (PollsConfig.Question q in qs)
                     {
                         PollsConfig.Answer a = new PollsConfig.Answer();
@@ -214,10 +239,43 @@ public class AnswerPageController : MonoBehaviour
         }
     }
 
-    List<PollsConfig.Answer> currentAnswer;
-    List<byte[]> photoList = null;
+    private void ReadyToAnswer()
+    {
+        if (!previewMode)
+        {
+            currentAnswer = new List<PollsConfig.Answer>();
+            photoList = new List<byte[]>();
+
+            foreach (PollsConfig.Question q in PollsConfig.selectedDepartment.questions)
+            {
+
+                PollsConfig.Answer a = new PollsConfig.Answer();
+                a.limit = q.limit;
+                a.shorttxt = q.shorttext;
+                a.longtxt = "";
+                currentAnswer.Add(a);
+            }
+        }
+        ClickImg.enabled = true;
+        ClickImg.color = Color.white;
+        //ClickImg.DOFade(0.0f, 0.5f).SetLoops(-1);
+        LoadImg.enabled = false;
+        holdPanel.SetActive(false);
+        numQuestion = 0;
+        if (!previewMode)
+        {
+            userGuid = Guid.NewGuid().ToString();
+            OpenWebCamera();
+            CreateTmpFolder();
+        }
+        loaded = true;
+        StartQuestions();
+    }
+
+
     private void OnEnable()
     {
+        doneBtnTime = -1.0f;
         if (photoList != null)
         {
             photoList.Clear();
@@ -232,7 +290,7 @@ public class AnswerPageController : MonoBehaviour
         if (PollsConfig.selectedDepartment == null || PollsConfig.selectedHospital == null)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("未知错误，请退出后重试");
+            Toast.ShowToast("未知错误，请退出后重试");
             this.gameObject.SetActive(false);
             introPage.gameObject.SetActive(true);
 #endif
@@ -240,28 +298,69 @@ public class AnswerPageController : MonoBehaviour
         if (!PollsConfig.selectedDepartment.qusetionLoaded)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("未选择题库，请退出后重试");
+            Toast.ShowToast("未选择题库，请退出后重试");
             this.gameObject.SetActive(false);
             introPage.gameObject.SetActive(true);
 #endif
         }
 
+        loaded = false;
         selectedDeparmentText.text = PollsConfig.selectedDepartment.name;
         selectedHospitalText.text = PollsConfig.selectedHospital.name;
+        //not need load questions
+        /*
         holdPanel.SetActive(true);
         jsonPath = PollsConfig.selectedDepartment.questionPath;
         StartCoroutine(LoadWWW());
+        */
+        ReadyToAnswer();
+
+        //ClickImg.enabled = false;
+        //LoadImg.enabled = true;
+        ReadyBtn.gameObject.SetActive(true);
+
     }
 
+    void MessageBoxCallback(int r)
+    {
+        if (r == 1)
+        {
+            if (confirmValue == 1) //exit
+            {
+                this.gameObject.SetActive(false);
+                introPage.gameObject.SetActive(true);
+            }
+            else if (confirmValue == 2) //retry
+            {
+                parseJson();
+            }
+            else if (confirmValue == 3)
+            {
+                doneBtnTime = 2.0f;
+                doneButton.gameObject.SetActive(true);
+            }
+        }
+        
+    }
+
+    int confirmValue = 1;
     void Start()
     {
-
+       
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        if (doneBtnTime > 0)
+        {
+            doneBtnTime -= Time.deltaTime;
+            if (doneBtnTime <= 0.0f)
+            {
+                OnDoneBtnClick();
+            }
+        }
+        LoadImg.transform.Rotate(0, 0, 5);
     }
 
     int numQuestion = 0;
@@ -269,11 +368,26 @@ public class AnswerPageController : MonoBehaviour
     int currentChecked = 0;
     void StartQuestions()
     {
-        List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
+        leftAvatarImage.enabled = (numQuestion % 2 == 0);
+        rightAvatarImage.enabled = (numQuestion % 2 != 0);
+        if (numQuestion % 2 == 0)
+        {
+            leftAvatarImage.sprite = Resources.Load<Sprite>("avatar/man" + UnityEngine.Random.Range(1, 7));
+            leftAvatarImage.SetNativeSize();
+        }
+        else
+        {
+            rightAvatarImage.sprite = Resources.Load<Sprite>("avatar/woman" + UnityEngine.Random.Range(1, 7));
+            rightAvatarImage.SetNativeSize();
+        }
+        List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionID];
         if (qs != null)
         {
             //take photo
-            if (numQuestion != 0 && numQuestion % 2 == 0 && webcamTexture != null)
+            if ((numQuestion == 1 || 
+                numQuestion == qs.Count - 1 || 
+                numQuestion == (qs.Count - 1) / 3 ||
+                numQuestion == (qs.Count - 1) / 3 * 2) && webcamTexture != null)
             {
                 webcamTexture.Pause();
                 StartCoroutine(CaptureWebCamTexture());
@@ -339,7 +453,7 @@ public class AnswerPageController : MonoBehaviour
 
                 for (int i = 0; i < 20; i++)
                 {
-                    if (q.answers[i] != null && q.answers[i] != "") 
+                    if (q.answers[i] != null && q.answers[i] != "")
                     {
                         GameObject newone = Instantiate(Resources.Load("ui/AnswerToggle") as GameObject);
                         if (newone != null)
@@ -378,11 +492,11 @@ public class AnswerPageController : MonoBehaviour
                                 }
                             }
                         }
-                       
+
                     }
                 }
 
-                
+
                 float ymax = (grid.GetComponent<RectTransform>().sizeDelta.x - 20) / r * 0.4f;
                 ymax = Math.Min(ymax, (grid.GetComponent<RectTransform>().sizeDelta.y - 20) / c);
                 grid.cellSize = new Vector2(ymax / 0.4f, ymax);
@@ -420,12 +534,12 @@ public class AnswerPageController : MonoBehaviour
                             ab.controller = this;
                             Toggle toggle = newone.GetComponent<Toggle>();
                             //toggle.spriteState.highlightedSprite = emojiNormalSprite[q.icons[i]];
-                            
+
                             SpriteState ss = new SpriteState();
                             if (q.type == 3)
                             {
                                 ss.highlightedSprite = emojiNormalSprite[Int32.Parse(q.icons[i]) - 1];
-                                ss.pressedSprite = emojiPressSprite[Int32.Parse(q.icons[i]) - 1];
+                                ss.pressedSprite = emojiNormalSprite[Int32.Parse(q.icons[i]) - 1];
                                 ss.disabledSprite = null;
                                 toggle.spriteState = ss;
                                 ab.imageNormal.sprite = emojiNormalSprite[Int32.Parse(q.icons[i]) - 1];
@@ -436,7 +550,7 @@ public class AnswerPageController : MonoBehaviour
                             else
                             {
                                 ss.highlightedSprite = emojiNormalSprite[5];
-                                ss.pressedSprite = emojiPressSprite[5];
+                                ss.pressedSprite = emojiNormalSprite[5];
                                 ss.disabledSprite = null;
                                 toggle.spriteState = ss;
                                 ab.imageNormal.sprite = emojiNormalSprite[5];
@@ -463,16 +577,11 @@ public class AnswerPageController : MonoBehaviour
 
                     }
                 }
-                iconGrid.cellSize = new Vector2(Math.Min(166 * (6.0f / (float)qcount), 166), Math.Min(166 * (6.0f / (float)qcount), 166) * 0.93f);
+                iconGrid.cellSize = new Vector2(Math.Min(150 * (6.0f / (float)qcount), 150), Math.Min(150 * (6.0f / (float)qcount), 150) * 1.0f);
             }
         }
     }
 
-    public void OnBackBtnClick()
-    {
-        this.gameObject.SetActive(false);
-        introPage.gameObject.SetActive(true);
-    }
 
     public void OnLeftBtnClick()
     {
@@ -480,10 +589,12 @@ public class AnswerPageController : MonoBehaviour
         StartQuestions();
     }
 
+
+    float doneBtnTime = -1.0f;
     public void OnRightBtnClick()
     {
-        
-        List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
+
+        List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionID];
         if (numQuestion < qs.Count - 1)
         {
             if (previewMode)
@@ -504,7 +615,7 @@ public class AnswerPageController : MonoBehaviour
                     }
                 }
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("请选择至少一项答案");
+                Toast.ShowToast("请选择至少一项答案");
 #endif
             }
         }
@@ -521,12 +632,15 @@ public class AnswerPageController : MonoBehaviour
                     if (currentAnswer[numQuestion].answers[i] != 0)
                     {
                         currentAnswer[numQuestion].endTime = DateTime.Now;
-                        doneButton.gameObject.SetActive(true);
+                        leftAvatarImage.enabled = false;
+                        rightAvatarImage.enabled = false;
+                        confirmValue = 3;
+                        messageBox.Show("所有题目已经回答完毕，是否结束?", "是", "否", MessageBoxCallback);
                         return;
                     }
                 }
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("请选择至少一项答案");
+                Toast.ShowToast("请选择至少一项答案");
 #endif
             }
         }
@@ -544,22 +658,32 @@ public class AnswerPageController : MonoBehaviour
     {
         if (!previewMode)
         {
-            List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
+            List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionID];
             PollsConfig.Question q = qs[numQuestion];
             if (q.limit == 1)
             {
                 currentAnswer[numQuestion].answers[idx] = 1;
                 currentAnswer[numQuestion].answer = (byte)(idx + 1);
+                currentAnswer[numQuestion].longtxt = q.answers[idx] + " ";
             }
             else if (currentChecked < q.limit)
             {
                 currentAnswer[numQuestion].answers[idx] = 1;
+                
                 currentChecked++;
+                currentAnswer[numQuestion].longtxt = "";
+                for (int i = 0; i < currentAnswer[numQuestion].answers.Length; ++i)
+                {
+                    if (currentAnswer[numQuestion].answers[i] == 1)
+                    {
+                        currentAnswer[numQuestion].longtxt += (i + 1) + "." + q.answers[i] + " ";
+                    }
+                }
             }
             else
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast(string.Format("此题最多能选择{0}个答案", q.limit));
+                Toast.ShowToast(string.Format("此题最多能选择{0}个答案", q.limit));
 #endif
                 currentChecked++;
                 toggle.isOn = false;
@@ -573,7 +697,7 @@ public class AnswerPageController : MonoBehaviour
     {
         if (!previewMode)
         {
-            List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionPath];
+            List<PollsConfig.Question> qs = PollsConfig.QuestionMap[PollsConfig.selectedDepartment.questionID];
             PollsConfig.Question q = qs[numQuestion];
             if (q.limit == 1)
             {
@@ -583,6 +707,14 @@ public class AnswerPageController : MonoBehaviour
             {
                 currentAnswer[numQuestion].answers[idx] = 0;
                 currentChecked--;
+                currentAnswer[numQuestion].longtxt = "";
+                for (int i = 0; i < currentAnswer[numQuestion].answers.Length; ++i)
+                {
+                    if (currentAnswer[numQuestion].answers[i] == 1)
+                    {
+                        currentAnswer[numQuestion].longtxt += (i + 1) + "." + q.answers[i] + " ";
+                    }
+                }
             }
             Debug.Log(" currentChecked " + currentChecked);
         }
@@ -592,8 +724,11 @@ public class AnswerPageController : MonoBehaviour
 
     public void OnDoneBtnClick()
     {
-        PollsConfig.NumPeoples = PollsConfig.NumPeoples + 1;
-        PollsConfig.SaveAnswer(currentAnswer, photoList, userGuid);
+        if (!previewMode)
+        {
+            PollsConfig.NumPeoples = PollsConfig.NumPeoples + 1;
+            PollsConfig.SaveAnswer(currentAnswer, photoList, userGuid);
+        }
         this.gameObject.SetActive(false);
         introPage.gameObject.SetActive(true);
     }
@@ -610,6 +745,15 @@ public class AnswerPageController : MonoBehaviour
         Marshal.FreeHGlobal(structPtr);
         return bytes;
 
+    }
+
+    public void OnReadyBtnClick()
+    {
+        if (loaded)
+        {
+            //ClickImg.DOKill();
+            ReadyBtn.gameObject.SetActive(false);
+        }
     }
 
 
@@ -663,7 +807,7 @@ public class AnswerPageController : MonoBehaviour
         yield return new WaitForEndOfFrame();
         //Texture2D t = new Texture2D(400, 300);
         //t.ReadPixels(new Rect(Screen.width / 2 - 200, Screen.height / 2 - 50, 360, 300), 0, 0, false);
-        
+
         WebCamTexture wt = (WebCamTexture)webcamRawImage.texture;
 
         int width = webcamRawImage.texture.width;
@@ -710,7 +854,7 @@ public class AnswerPageController : MonoBehaviour
             {
                 Directory.CreateDirectory(folderPath);
             }
-            folderPath += "/" + Path.GetFileNameWithoutExtension(PollsConfig.selectedDepartment.questionPath);
+            folderPath += "/" + Path.GetFileNameWithoutExtension(PollsConfig.selectedDepartment.questionID);
             if (!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);
@@ -727,11 +871,11 @@ public class AnswerPageController : MonoBehaviour
             }
             tmpPath = folderPath;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Debug.LogError(e.Message);
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("创建临时路径失败");
+            Toast.ShowToast("创建临时路径失败");
 #endif
         }
     }
@@ -744,5 +888,32 @@ public class AnswerPageController : MonoBehaviour
             webcamTexture.Stop();
         }
         webcamTexture = null;
+    }
+
+    public void OnReturnBtnClick()
+    {
+        if (previewMode)
+        {
+            this.gameObject.SetActive(false);
+            introPage.gameObject.SetActive(true);
+        }
+        else
+        {
+            confirmValue = 1;
+            messageBox.Show("答题尚未完成，是否退出?", "是", "否", MessageBoxCallback);
+        }
+    }
+
+    public void OnRetryBtnClick()
+    {
+        if (!previewMode)
+        {
+            confirmValue = 2;
+            messageBox.Show("答题尚未完成，是否重新开始?", "是", "否", MessageBoxCallback);
+        }
+        else
+        {
+            parseJson();
+        }
     }
 }

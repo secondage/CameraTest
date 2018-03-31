@@ -19,6 +19,7 @@ public class FileChooser : MonoBehaviour {
 
 	public InputField fileInput;
 	public Text placeholder;
+    public Text TextTopic;
 
 	public Button openSaveButton;
 
@@ -214,14 +215,16 @@ public class FileChooser : MonoBehaviour {
 		}else{
 			//if not extension provided try all the extensions
 			if(!fileInput.text.Contains (".") && extensions.Count>0){
-				for(int i=0;i<extensions.Count;i++){
+                /*for(int i=0;i<extensions.Count;i++){
 					string testFilename = fullFilename+extensions[i];
 					if(File.Exists( testFilename)){
 						fullFilename = testFilename;
 						break;
 					}
-				}
-			}
+				}*/
+                Debug.Log("Can't return. Directory or File does not exist: " + fullFilename);
+                return;
+            }
 			//if file still not exist don't return
 			if( !File.Exists( fullFilename) ) {
                 if (!Directory.Exists(fullFilename))

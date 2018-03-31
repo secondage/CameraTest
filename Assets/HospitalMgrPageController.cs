@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
-using waqashaxhmi.AndroidNativePlugin;
 
 public class HospitalMgrPageController : MonoBehaviour {
     [SerializeField]
@@ -24,23 +24,54 @@ public class HospitalMgrPageController : MonoBehaviour {
     [SerializeField]
     GameObject mgrPage;
 
+    public GameObject loadingPanel;
+
+
+    public GameObject HoldPanel;
+
+    public class HospitalListParser
+    {
+        public HospitalListParser()
+        {
+
+        }
+        public int id { get; set; }
+        public string name { get; set; }
+        public string desc { get; set; }
+        public string city { get; set; }
+
+    }
+
     static Dictionary<HospitalCell, PollsConfig.HospitalCellInfo> HospitalCellMap = new Dictionary<HospitalCell, PollsConfig.HospitalCellInfo>();
     static HospitalCell hotHospitalCell = null;
 
-    private float gridOriginHeight;
+    private static float gridOriginHeight = 0;
     // Use this for initialization
+    public MessageBox messageBox;
+    void MessageBoxCallback(int r)
+    {
+        if (r == 1)
+        {
+           // HoldPanel.gameObject.SetActive(false);
+            ConfirmDelHospital();
+        }
+        else
+        {
+           // HoldPanel.gameObject.SetActive(false);
+        }
+
+    }
+
     void Start () {
-        AndroidNativeController.OnPositiveButtonPressEvent = (message) => {
+        /*AndroidNativeController.OnPositiveButtonPressEvent = (message) => {
+            HoldPanel.gameObject.SetActive(false);
             ConfirmDelHospital();
         };
         AndroidNativeController.OnNegativeButtonPressEvent = (message) => {
             // Code whatever you want on click "NO" Button.
-        };
-        for (int i = 0; i < grid.transform.childCount; i++)
-        {
-            Destroy(grid.transform.GetChild(i).gameObject);
-        }
-        UpdateList();
+            HoldPanel.gameObject.SetActive(false);
+        };*/
+       
     }
 	
 	// Update is called once per frame
@@ -50,16 +81,42 @@ public class HospitalMgrPageController : MonoBehaviour {
 
     void OnEnable()
     {
-        if (hotHospitalCell != null)
+        
+        if (gridOriginHeight == 0)
         {
-            hotHospitalCell.imgSelected.enabled = false;
+            gridOriginHeight = grid.GetComponent<RectTransform>().sizeDelta.y;
         }
-        PollsConfig.selectedHospital = null;
-        hotHospitalCell = null;
-        textSelected.text = "未选择医院";
-        btnDelete.interactable = false;
-        btnNext.interactable = false;
-        gridOriginHeight = grid.GetComponent<RectTransform>().sizeDelta.y;
+        for (int i = 0; i < grid.transform.childCount; i++)
+        {
+            Destroy(grid.transform.GetChild(i).gameObject);
+        }
+        UpdateList();
+        /*if (PollsConfig.selectedHospital != null)
+        {
+            if (PollsConfig.Hospitals.ContainsKey(PollsConfig.selectedHospital.name))
+            { 
+                foreach(KeyValuePair<HospitalCell, PollsConfig.HospitalCellInfo> pair in HospitalCellMap)
+                {
+                    if (pair.Key.textName.text == PollsConfig.selectedHospital.name)
+                    {
+                        OnClickCell(pair.Key);
+                    }
+                }
+            }
+        }
+        else*/
+        {
+            if (hotHospitalCell != null)
+            {
+                hotHospitalCell.imgSelected.enabled = false;
+            }
+            PollsConfig.selectedHospital = null;
+            PollsConfig.selectedDepartment = null;
+            hotHospitalCell = null;
+            textSelected.text = "未选择医院";
+            btnDelete.interactable = false;
+            btnNext.interactable = false;
+        }
     }
 
     public void UpdateList()
@@ -101,22 +158,55 @@ public class HospitalMgrPageController : MonoBehaviour {
         {
             Debug.Log("Instantiate HospitalCell failed.");
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("未知错误，请退出后重试");
+            Toast.ShowToast("未知错误，请退出后重试");
 #endif
         }
     }
 
+    IEnumerator webGetAllHospital()
+    {
+        WWW www = new WWW("http://47.106.71.112/webservice.asmx/GetHospitals");
+        yield return www;
+        if (www.isDone && www.error == null)
+        {
+            var settings = new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All };
+            List<HospitalListParser> configs = JsonConvert.DeserializeObject<List<HospitalListParser>>(www.text, settings);
+            foreach(HospitalListParser c in configs)
+            {
+                int result = PollsConfig.AddHospitals(c.name, c.id);
+                if (result == -1)
+                {
+#if UNITY_ANDROID
+                    Toast.ShowToast("医院名已存在");
+#endif
+                }
+                else if (result == -2)
+                {
+#if UNITY_ANDROID
+                    Toast.ShowToast("创建项目失败");
+#endif
+                }
+                else
+                {
+                    AddNewCell(c.name);
+                }
+            }
+            loadingPanel.SetActive(false);
+            www.Dispose();
+        }
+
+    }
+
     public void OnInputNameEnd()
     {
+        HoldPanel.gameObject.SetActive(false);
         if (nameInput.text == "")
             return;
         string pattern = @"^[^ ]{2,16}$";
         Regex regex = new Regex(pattern);
         if (!regex.IsMatch(nameInput.text))
         {
-#if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("医院名称为2-16个字符，且不能存在空格");
-#endif
+            Toast.ShowToast("医院名称为2-16个字符，且不能存在空格");
             Debug.LogWarning("医院名称为2-16个字符，且不能存在空格");
             return;
         }
@@ -124,24 +214,23 @@ public class HospitalMgrPageController : MonoBehaviour {
         regex = new Regex(pattern);
         if (!regex.IsMatch(nameInput.text))
         {
-#if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("医院名称仅能使用汉字，英文字母，数字");
-#endif
+
+            Toast.ShowToast("医院名称仅能使用汉字，英文字母，数字");
             Debug.LogWarning("医院名称仅能使用汉字，英文字母，数字");
             return;
         }
         string name = nameInput.text;
-        int result = PollsConfig.AddHospitals(name);
+        int result = PollsConfig.AddHospitals(name, 0);
         if (result == -1)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("医院名已存在");
+            Toast.ShowToast("医院名已存在");
 #endif
         }
         else if (result == -2)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("创建项目失败");
+            Toast.ShowToast("创建项目失败");
 #endif
         }
         else
@@ -193,8 +282,15 @@ public class HospitalMgrPageController : MonoBehaviour {
 
     public void AddHospital()
     {
+        HoldPanel.gameObject.SetActive(true);
         nameInput.text = "请输入医院名称";
         nameInput.ActivateInputField();
+    }
+
+    public void LoadHospitalList()
+    {
+        loadingPanel.gameObject.SetActive(true);
+        StartCoroutine(webGetAllHospital());
     }
 
     public void DelHospital()
@@ -203,16 +299,18 @@ public class HospitalMgrPageController : MonoBehaviour {
             return;
         else
         {
-            if (Application.platform == RuntimePlatform.WindowsEditor)
+            /*if (Application.platform == RuntimePlatform.WindowsEditor)
             {
                 ConfirmDelHospital();
             }
             else
             {
+                HoldPanel.gameObject.SetActive(true);
 #if UNITY_ANDROID
                 AndroidNativePluginLibrary.Instance.ShowConfirmationDialouge("删除医院", "是否删除医院：" + hotHospitalCell.textName.text, "是", "否");
 #endif
-            }
+            }*/
+            messageBox.Show("是否删除医院：" + hotHospitalCell.textName.text, "是", "否", MessageBoxCallback);
         }
     }
 

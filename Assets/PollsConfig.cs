@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using Assets.HellionCat.SimpleExport;
 using System;
 using System.Security.Cryptography;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Xml.Serialization;
 using System.Collections.Specialized;
 using System.Text;
-using waqashaxhmi.AndroidNativePlugin;
+using DG.Tweening;
+
 
 public class PollsConfig : MonoBehaviour
 {
@@ -19,6 +18,7 @@ public class PollsConfig : MonoBehaviour
     public class HospitalCellInfo
     {
         public Guid projectID;        //项目id
+        public int hospitalID;
         public string name;     //医院名称
         public DateTime createTime;          //创建时间
         public Dictionary<string, DepartmentCellInfo> departments = new Dictionary<string, DepartmentCellInfo>();
@@ -26,12 +26,15 @@ public class PollsConfig : MonoBehaviour
     [Serializable]
     public class DepartmentCellInfo
     {
+        public int departmentID;
         public HospitalCellInfo hospital;
         public string name;     //科室名称
-        public string questionPath; //题目文件路径
+       // public string questionPath; //题目文件路径
+        public string questionID;
+        public List<Question> questions;
         public bool qusetionLoaded = false;
     };
-
+    [Serializable]
     public class Question
     {
         public string id;
@@ -39,9 +42,17 @@ public class PollsConfig : MonoBehaviour
         public int limit;
         public string question;
         public string shorttext;
+        public string[] indeices = new string[5];
         public string[] answers = new string[20];
-        public string[] icons = new string[12]; 
+        public string[] icons = new string[12];
     };
+
+    public class QuestionBlock
+    {
+        public HospitalCellInfo hospitalInfo;
+        public DepartmentCellInfo departmentInfo;
+        public Dictionary<string, List<Question>> questionMap;
+    }
 
     [Serializable]
     public class Answer
@@ -49,9 +60,11 @@ public class PollsConfig : MonoBehaviour
         public DateTime startTime;
         public DateTime endTime;
         public string shorttxt;
+        public string longtxt;
         public string id;
         public int type;
         public int limit;
+        public int questionIdx;
         public byte[] answers = new byte[20];
         public byte answer;
     };
@@ -70,7 +83,7 @@ public class PollsConfig : MonoBehaviour
     static public Dictionary<string, List<Question>> QuestionMap = new Dictionary<string, List<Question>>();
 
     static public HospitalCellInfo selectedHospital = null; //当前医院
-    static public DepartmentCellInfo selectedDepartment= null; //当前科室
+    static public DepartmentCellInfo selectedDepartment = null; //当前科室
 
     static public Dictionary<string, HospitalCellInfo> Hospitals = new Dictionary<string, HospitalCellInfo>();
     private static readonly int MAX_ANS_COUNT = 20;
@@ -129,7 +142,12 @@ public class PollsConfig : MonoBehaviour
         return Hospitals[name];
     }
 
-    static public int AddHospitals(string name)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns>0="succeeded"</returns>
+    static public int AddHospitals(string name, int id)
     {
         if (Hospitals.ContainsKey(name))
         {
@@ -141,9 +159,10 @@ public class PollsConfig : MonoBehaviour
             {
                 name = name,
                 projectID = Guid.NewGuid(),
-                createTime = DateTime.Now
+                createTime = DateTime.Now,
+                hospitalID = id
             };
-            if (AddDepartment("通用科室", hc) == 0)
+            if (/*AddDepartment("通用科室", hc) == 0*/true)
             {
                 Hospitals.Add(name, hc);
                 return 0;
@@ -174,7 +193,7 @@ public class PollsConfig : MonoBehaviour
         selectedHospital = null;
     }
 
-    static public int AddDepartment(string name, HospitalCellInfo hci = null)
+    static public int AddDepartment(string name, int id, HospitalCellInfo hci = null)
     {
         if (hci == null && selectedHospital == null)
         {
@@ -193,8 +212,9 @@ public class PollsConfig : MonoBehaviour
             DepartmentCellInfo dci = new DepartmentCellInfo
             {
                 name = name,
-                questionPath = "",
-                hospital = hci != null ? hci : selectedHospital
+                questionID = "",
+                hospital = hci != null ? hci : selectedHospital,
+                departmentID = id
             };
             if (hci != null)
             {
@@ -212,7 +232,29 @@ public class PollsConfig : MonoBehaviour
             return -2;
         }
     }
-
+    /// <summary>
+    /// 
+    /// </summary>
+    static public void ClearQuestionMap()
+    {
+        QuestionMap.Clear();
+    }
+    /// <summary>
+    /// 
+    /// </summary>
+    static public void DelAllDepartment()
+    {
+        if (selectedHospital == null)
+        {
+            return;
+        }
+        selectedHospital.departments.Clear();
+        selectedDepartment = null;
+    }
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="name"></param>
     static public void DelDepartment(string name)
     {
         if (selectedHospital == null)
@@ -226,17 +268,36 @@ public class PollsConfig : MonoBehaviour
         selectedDepartment = null;
     }
 
-    static public DepartmentCellInfo GetDepartmentCellInfoByName(string name)
+    static public int GetDepartmentCellInfoCount(HospitalCellInfo hci)
     {
-        if (selectedHospital == null)
+        if (hci != null && hci.departments != null)
+        {
+            return hci.departments.Count;
+        }
+        return 0;
+    }
+
+    static public DepartmentCellInfo GetDepartmentCellInfoByName(string name, HospitalCellInfo hci = null)
+    {
+        if (selectedHospital == null && hci == null)
         {
             return null;
         }
-        if (!selectedHospital.departments.ContainsKey(name))
+        if (selectedHospital != null)
         {
-            return null; //rlready exist
+            if (!selectedHospital.departments.ContainsKey(name))
+                return null; //rlready exist
+            else
+                return selectedHospital.departments[name];
         }
-        return selectedHospital.departments[name];
+        if (hci != null)
+        {
+            if (!hci.departments.ContainsKey(name))
+                return null; //rlready exist
+            else
+                return hci.departments[name];
+        }
+        return null;
     }
 
     static public void SerializeData()
@@ -266,6 +327,16 @@ public class PollsConfig : MonoBehaviour
             {
                 BinaryFormatter bf = new BinaryFormatter();
                 Hospitals = bf.Deserialize(fs) as Dictionary<string, HospitalCellInfo>;
+                foreach(KeyValuePair<string, HospitalCellInfo> pair in Hospitals)
+                {
+                    foreach (KeyValuePair<string, DepartmentCellInfo> dci in pair.Value.departments)
+                    {
+                        if (dci.Value.qusetionLoaded)
+                        {
+                            QuestionMap[dci.Value.questionID] = dci.Value.questions;
+                        }
+                    }
+                }
                 fs.Close();
             }
         }
@@ -292,7 +363,16 @@ public class PollsConfig : MonoBehaviour
 
     private void Awake()
     {
+        if (Application.platform == RuntimePlatform.Android)
+        {
+            //Screen.SetResolution(1280, 800, false);
+        }
+
         Debug.Log(Application.persistentDataPath);
+        DOTween.Init(false, false, LogBehaviour.ErrorsOnly);
+        DOTween.useSafeMode = false;
+        DOTween.useSmoothDeltaTime = false;
+        DOTween.defaultUpdateType = UpdateType.Late;
         Application.targetFrameRate = 100;
         UnserializeData();
         LoadAnswer();
@@ -310,7 +390,7 @@ public class PollsConfig : MonoBehaviour
                 fs.Close();
             }
         }
-        
+
     }
 
     public static string get_ascii(string unicodeString)
@@ -320,7 +400,7 @@ public class PollsConfig : MonoBehaviour
         byte[] Buff = System.Text.Encoding.Unicode.GetBytes(unicodeString);
         string retStr = System.Text.Encoding.ASCII.GetString(Buff, 0, Buff.Length);
         return retStr;
-   }
+    }
 
     static public void ExportData(string path)
     {
@@ -332,7 +412,7 @@ public class PollsConfig : MonoBehaviour
                 ES2Spreadsheet sheet = new ES2Spreadsheet();
                 AnswerStorge _ans = pair.Value[0];
                 // Add data to cells in the spreadsheet.
-                
+
                 //List<Question> qs = QuestionMap[pair.Value[0].department.questionPath];
                 for (int row = 0; row < pair.Value.Count + 1; row++)
                 {
@@ -385,7 +465,9 @@ public class PollsConfig : MonoBehaviour
                                     break;
                                 default:
                                     if (pair.Value[row - 1].answers[col - 5].limit == 1)
-                                        sheet.SetCell(col, row, pair.Value[row - 1].answers[col - 5].answer);
+                                    {
+                                        sheet.SetCell(col, row, pair.Value[row - 1].answers[col - 5].longtxt);
+                                    }
                                     else
                                     {
                                         UInt32 t = 0;
@@ -396,7 +478,8 @@ public class PollsConfig : MonoBehaviour
                                                 t += (UInt32)Math.Pow(2, i);
                                             }
                                         }
-                                        sheet.SetCell(col, row, t.ToString());
+                                        //sheet.SetCell(col, row, t.ToString());
+                                        sheet.SetCell(col, row, pair.Value[row - 1].answers[col - 5].longtxt);
                                     }
                                     break;
                             }
@@ -405,23 +488,27 @@ public class PollsConfig : MonoBehaviour
                 }
                 string _folderPath = path + "/" + _ans.hospital.name;
                 _folderPath += "/" + _ans.department.name;
-                _folderPath += "/" + Path.GetFileNameWithoutExtension(_ans.department.questionPath);
+                _folderPath += "/" + Path.GetFileNameWithoutExtension(_ans.department.questionID);
                 sheet.Save(_folderPath + "/" + "mySheet.csv");
 
-                foreach(AnswerStorge ans in pair.Value)
+                foreach (AnswerStorge ans in pair.Value)
                 {
                     for (int i = 0; i < ans.photos.Count; ++i)
                     {
                         File.WriteAllBytes(_folderPath + "/" + ans.guid + "-" + (i + 1).ToString() + ".jpg", ans.photos[i]);
                     }
                 }
+#if UNITY_ANDROID
+                Toast.ShowToast("导出数据成功，导出路径为 ：" + _folderPath);
+#endif
+
             }
             //SimpleExport_ScoreCSV.ExportCSV()
         }
-        catch(Exception e)
+        catch (Exception e)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("导出数据错误，请退出后重试");
+            Toast.ShowToast("导出数据错误，请退出后重试");
 #endif
             Debug.LogError(e.Message);
         }
@@ -438,7 +525,7 @@ public class PollsConfig : MonoBehaviour
             ans.answers = answers;
             ans.photos = photos;
             ans.guid = guid;
-            string hash = ans.hospital.name + "%" + ans.department.name + "%" + Path.GetFileNameWithoutExtension(selectedDepartment.questionPath);
+            string hash = ans.hospital.name + "%" + ans.department.name + "%" + Path.GetFileNameWithoutExtension(selectedDepartment.questionID);
             List<AnswerStorge> slist = null;
             if (Answers.ContainsKey(hash))
             {
@@ -460,7 +547,7 @@ public class PollsConfig : MonoBehaviour
             {
                 Directory.CreateDirectory(folderPath);
             }
-            folderPath += "/" + Path.GetFileNameWithoutExtension(selectedDepartment.questionPath);
+            folderPath += "/" + Path.GetFileNameWithoutExtension(selectedDepartment.questionID);
             if (!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);

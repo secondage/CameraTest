@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
-using waqashaxhmi.AndroidNativePlugin;
 
 
 public class MgrPageController : MonoBehaviour
@@ -18,6 +17,8 @@ public class MgrPageController : MonoBehaviour
     public GameObject introPage;
     public GameObject hospitalPage;
     public FileChooser fileChooser;
+    public GameObject answerPage;
+    public GameObject holdPanel;
 
     public enum PWD_STAGE
     {
@@ -40,6 +41,12 @@ public class MgrPageController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (Application.platform != RuntimePlatform.WindowsEditor)
+        {
+#if UNITY_ANDROID
+            StartCoroutine(startCamera());
+#endif
+        }
         if (PollsConfig.Password == "")
         {
             TextPwd.text = "创建密码";
@@ -62,17 +69,33 @@ public class MgrPageController : MonoBehaviour
 
     }
 
+    WebCamTexture webcameratex;
+    private IEnumerator startCamera()
+    {
+        yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
+        Debug.Log("RequestUserAuthorization succeeded.");
+        if (Application.HasUserAuthorization(UserAuthorization.WebCam))
+        {
+            WebCamTexture tex = new WebCamTexture(WebCamTexture.devices[1].name, 640, 480, 12);
+            tex.Play();
+            tex.Stop();
+            tex = null;
+        }
+    }
+
     string TmpPwd;
     void SetupPwd(string pwd)
     {
         HoldInputPanel.SetActive(false);
+        if (pwd == null || pwd == "")
+            return;
         TopicText.text = "";
         string pattern = @"^[^ ]{6,6}$";
         Regex regex = new Regex(pattern);
         if (!regex.IsMatch(pwd))
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("密码为6位字符，且不能存在空格");
+            Toast.ShowToast("密码为6位字符，且不能存在空格");
 #endif
             Debug.LogWarning("密码为6位字符，且不能存在空格");
             return;
@@ -80,12 +103,8 @@ public class MgrPageController : MonoBehaviour
         if (pwd.Length != 6)
         {
 #if UNITY_ANDROID
-            AndroidNativePluginLibrary.Instance.ShowToast("密码长度为6位");
+            Toast.ShowToast("密码长度为6位");
 #endif
-            return;
-        }
-        if (pwd == "")
-        {
             return;
         }
         if (pwdStage == PWD_STAGE.NEW_PWD)
@@ -100,7 +119,7 @@ public class MgrPageController : MonoBehaviour
             if (TmpPwd == PollsConfig.GetMD5(pwd))
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("管理员密码设置成功");
+                Toast.ShowToast("管理员密码设置成功");
 #endif
                 TmpPwd = "";
                 PollsConfig.Password = pwd;
@@ -113,7 +132,7 @@ public class MgrPageController : MonoBehaviour
             else
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("密码输入不一致，请重新再试");
+                Toast.ShowToast("密码输入不一致，请重新再试");
 #endif
                 TmpPwd = "";
             }
@@ -129,7 +148,7 @@ public class MgrPageController : MonoBehaviour
             else
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("请输入正确的管理员密码");
+                Toast.ShowToast("请输入正确的管理员密码");
 #endif
                 TopicText.text = "";
             }
@@ -144,7 +163,7 @@ public class MgrPageController : MonoBehaviour
             else
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("请输入正确的管理员密码");
+                Toast.ShowToast("请输入正确的管理员密码");
 #endif
                 TopicText.text = "";
             }
@@ -157,12 +176,14 @@ public class MgrPageController : MonoBehaviour
                 if (PollsConfig.Answers.Count == 0)
                 {
 #if UNITY_ANDROID
-                    AndroidNativePluginLibrary.Instance.ShowToast("目前无可导出数据");
+                    Toast.ShowToast("目前无可导出数据");
 #endif
                 }
                 else
                 {
                     fileChooser.setup(FileChooser.OPENSAVE.OPEN, "");
+                    fileChooser.openSaveButton.GetComponentInChildren<Text>().text = "选择";
+                    fileChooser.TextTopic.text = "请选择需要导出至的位置";
                     fileChooser.callbackYes = delegate (string filename, string fullname)
                     {
                     //first hide the filechooser
@@ -180,7 +201,7 @@ public class MgrPageController : MonoBehaviour
             else
             {
 #if UNITY_ANDROID
-                AndroidNativePluginLibrary.Instance.ShowToast("请输入正确的管理员密码");
+                Toast.ShowToast("请输入正确的管理员密码");
 #endif
                 TopicText.text = "";
             }
@@ -230,18 +251,44 @@ public class MgrPageController : MonoBehaviour
 
     public void OnQuestionMgrBtnClick()
     {
-        TopicText.text = "请输入管理员密码";
+        /*TopicText.text = "请输入管理员密码";
         pwdStage = PWD_STAGE.VERIFY_QUESTION_PWD;
         mgrPasswordInput.text = "";
-        mgrPasswordInput.ActivateInputField();
+        mgrPasswordInput.ActivateInputField();*/
+        this.gameObject.SetActive(false);
+        hospitalPage.gameObject.SetActive(true);
     }
 
     public void OnExportBtnClick()
     {
-        TopicText.text = "请输入管理员密码";
+        /*TopicText.text = "请输入管理员密码";
         pwdStage = PWD_STAGE.VERIFY_EXPORT_PWD;
         mgrPasswordInput.text = "";
-        mgrPasswordInput.ActivateInputField();
+        mgrPasswordInput.ActivateInputField();*/
+        if (PollsConfig.Answers.Count == 0)
+        {
+#if UNITY_ANDROID
+            Toast.ShowToast("目前无可导出数据");
+#endif
+        }
+        else
+        {
+            fileChooser.setup(FileChooser.OPENSAVE.OPEN, "");
+            fileChooser.openSaveButton.GetComponentInChildren<Text>().text = "选择";
+            fileChooser.TextTopic.text = "请选择需要导出至的位置";
+            fileChooser.callbackYes = delegate (string filename, string fullname)
+            {
+                //first hide the filechooser
+                fileChooser.gameObject.SetActive(false);
+                Debug.Log("select " + fullname);
+                PollsConfig.ExportData(fullname);
+            };
+
+            fileChooser.callbackNo = delegate ()
+            {
+                fileChooser.gameObject.SetActive(false);
+            };
+        }
     }
 
 }

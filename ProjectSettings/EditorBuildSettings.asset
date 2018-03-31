@@ -9,17 +9,17 @@ EditorBuildSettings:
     path: 
     guid: 00000000000000000000000000000000
   - enabled: 0
-    path: Assets/VoxelBusters/NativePlugins/Demo/Scene/DemoScene.unity
-    guid: b8ab508baab1845ea8c4f33270aad42f
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 0
-    path: Assets/FantomPlugin/Demo/Scenes/ExternalStorageTest.unity
-    guid: e94e21b9776c42044890804ab698b80c
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 1
     path: Assets/main.unity
     guid: f6f26eba7e40bfe4b85b5e4856ed0bd5
-  - enabled: 1
+  - enabled: 0
     path: Assets/File Chooser/MainScene.unity
     guid: f2ced6bdddd200949a87175724c5c431
-  - enabled: 1
+  - enabled: 0
     path: Assets/AndroidNativPlugin/Examples/Scene/AndroidNativeDemo.unity
     guid: bbb6da26512a942a885eeade9c8fc304
